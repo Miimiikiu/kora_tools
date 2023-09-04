@@ -18,7 +18,7 @@ This will install the updated xacro_generator.py into ros2 so you can run ```ros
 
 From the workspace root (~/my_ws) run ```colcon build``` again to install my_robot.xacro.urdf and my_robot.urdf into your ROS2 workspace.
 
-## SFD Generator
+## SDF Generator
 
 An easy way to create your robot's simulation files.
 
