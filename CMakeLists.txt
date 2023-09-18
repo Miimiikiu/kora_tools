@@ -28,5 +28,7 @@ ament_package()
 install(
   PROGRAMS
   src/tools/xacro_generator.py
+  src/tools/sdf_generator.py
+  src/tools/get_inertials.py
   DESTINATION lib/${PROJECT_NAME}
 )

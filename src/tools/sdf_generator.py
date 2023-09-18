@@ -11,13 +11,18 @@ This software is licensed under the MIT License.
 #This ROS2 executable defines joints, links, properties, etc for a ROS2 robot and outputs an SDF file
 
 import os
+import pandas as pd
+import ast
+
+allow_sensing = True # Debugging purposes
 
 def create_header(outfile, robot_name, world_name): 
+    
     text = '''<?xml version="1.0"?>
 <sdf version="1.9">
   
 
-<!-- Built using SDF Generator: https://github.com/Bentell-Robotics/kora_tools.git -->
+<!-- Built using SDF Generator: https://github.com/Miimiikiu/kora_tools.git -->
 <!-- Editing this SDF file by hand is not recommended. -->'''
 
     #for prop in properties:
@@ -51,13 +56,17 @@ def create_header(outfile, robot_name, world_name):
         filename="ignition-gazebo-scene-broadcaster-system"
         name="ignition::gazebo::systems::SceneBroadcaster">
     </plugin>
-
+'''.format(world_name)
+    if allow_sensing == True:
+        text += '''
     <plugin
       filename="libignition-gazebo-sensors-system.so"
       name="ignition::gazebo::systems::Sensors">
       <!-- ogre2 not working with just the MESA_GL_VERSION_OVERRIDE=3.3 trick -->
       <render_engine>ogre</render_engine>
     </plugin>
+    '''
+    text += '''
 
 
 
@@ -85,7 +94,7 @@ def create_header(outfile, robot_name, world_name):
         <pose>10 -2 -2 0 0 0</pose>
       </camera>
     </gui>
-
+    
     <model name="ground_plane">
         <static>true</static>
         <link name="link">
@@ -111,34 +120,34 @@ def create_header(outfile, robot_name, world_name):
             </visual>
         </link>
     </model>
-
+    <!--
     <include>
       <static>true</static>
       <name>Electrical Box1</name>
       <pose>0 1.5 2 0 0 0</pose>
-      <uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/Electrical Box</uri>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Electrical Box</uri>
     </include>
 
     <include>
       <static>true</static>
       <name>Electrical Box2</name>
       <pose>0 -1 1 0 0 0</pose>
-      <uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/Electrical Box</uri>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Electrical Box</uri>
     </include>
 
     <include>
       <static>true</static>
       <name>Electrical Box3</name>
       <pose>2 1.5 2 0 0 0</pose>
-      <uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/Electrical Box</uri>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Electrical Box</uri>
     </include>
 
     <include>
       <static>true</static>
       <name>Electrical Box4</name>
       <pose>-2 1.5 2 0 0 0</pose>
-      <uri>https://fuel.ignitionrobotics.org/1.0/openrobotics/models/Electrical Box</uri>
-    </include>
+      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Electrical Box</uri>
+    </include>-->
 
     <model name="{}" canonical_link='torso_lower'>
       <static>true</static>
@@ -148,51 +157,64 @@ def create_header(outfile, robot_name, world_name):
       <pose relative_to='world'>0 0 1 0 0 0</pose> 
 
 
-    '''.format(world_name, robot_name)
+    '''.format(robot_name)
     outfile.write(text)
     return(text)
 
-def create_link(outfile, link_name, link_data):
+def create_link(outfile, link_name, link_data, desc_path, inertia_scale=1, visual_scale=1, collision_scale=1, collision_mesh_type='STL'):
+    if collision_mesh_type == 'STL':
+       stl_type = 'Binary_'
+    else:
+       stl_type = ''
     
     text = '''      <link name="{}">
         <pose relative_to='{}'>{} {} {} {} {} {}</pose>
+        <!--<pose>[] [] [] [] [] []</pose>-->
         <visual name='visual_{}'>
           <geometry>
             <mesh>
-              <uri>./{}</uri>
+              <uri>{}</uri>
+              <scale>{} {} {}</scale>
             </mesh>
           </geometry>
-        </visual>'''.format(link_name, link_data['parent'], float(link_data['ox']), float(link_data['oy']), float(link_data['oz']), float(link_data['roll']), float(link_data['pitch']), float(link_data['yaw']), link_name, 'OBJ/' + link_name + '.obj')
+        </visual>'''.format(link_name, link_data['parent'], float(link_data['ox']), float(link_data['oy']), float(link_data['oz']), float(link_data['roll']), float(link_data['pitch']), float(link_data['yaw']), 
+                            link_name, desc_path + '/visuals/OBJ/' + link_name + '.obj', visual_scale, visual_scale, visual_scale)
 
     if link_data['color'] != 'None':
       text += '''
         <material name="{}"/>
         <color rgba="{}"/>
 '''.format(link_data['color'], '${' + str(link_data['color']) + '}')
-      
-
+    df = pd.read_csv(desc_path + '/geometry/geometry.csv', sep=';') # get data for robot inertia values
+    inertials_string = df.loc[df['Mesh Name'] == '{}.obj'.format(link_name), 'Inertia Tensor'].values[0]
+    inertials = ast.literal_eval(inertials_string)
+    mass_string = df.loc[df['Mesh Name'] == '{}.obj'.format(link_name), 'Mass'].values[0]
+    mass = float(mass_string)
+    #print(mass)
     text += '''        <collision name='collision_{}'>
           <geometry>
             <mesh>
-              <uri>./{}</uri>
+              <uri>{}</uri>
+              <scale>{} {} {}</scale>
             </mesh>
           </geometry>
         </collision>
         <inertial> <!--inertial properties of the link mass, inertia matix-->
-          <mass>1.14395</mass>
+          <mass>{}</mass>
           <inertia>
-            <ixx>0.095329</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>0.381317</iyy>
-            <iyz>0</iyz>
-            <izz>0.476646</izz>
+            <ixx>{}</ixx>
+            <ixy>{}</ixy>
+            <ixz>{}</ixz>
+            <iyy>{}</iyy>
+            <iyz>{}</iyz>
+            <izz>{}</izz>
           </inertia>
         </inertial>
-'''.format(link_name, 'OBJ/collisions/' + link_name + '_collision.stl')
+'''.format(link_name, desc_path + '/collisions/{}{}/'.format(stl_type, collision_mesh_type.upper()) + link_name + '_collision.{}'.format(collision_mesh_type.lower()), 
+           collision_scale, collision_scale, collision_scale, mass, inertials[0][0]*inertia_scale, inertials[0][1]*inertia_scale, inertials[0][2]*inertia_scale, inertials[1][1]*inertia_scale, inertials[1][2]*inertia_scale, inertials[2][2]*inertia_scale)
       
-    if link_data['sensor'] != {}: #https://github.com/ros-simulation/gazebo_ros_pkgs/wiki/ROS-2-Migration:-Camera#gazebo_ros_depth_camera
-      text += '''<!-- {}{}-->
+    if link_data['sensor'] != {} and allow_sensing == True: #https://github.com/ros-simulation/gazebo_ros_pkgs/wiki/ROS-2-Migration:-Camera#gazebo_ros_depth_camera
+      text += '''<!-- {} -->
       
               <sensor type="camera" name="camera_sensor_color">
           
@@ -290,7 +312,7 @@ def create_link(outfile, link_name, link_data):
 
              <min_depth>0.001</min_depth>
           </plugin>
-        </sensor>'''.format(link_data['sensor']['name'], link_data['sensor']['name']) #https://automaticaddison.com/how-to-add-a-depth-camera-to-an-sdf-file-for-gazebo/
+        </sensor>'''.format(link_data['sensor']['name']) #https://automaticaddison.com/how-to-add-a-depth-camera-to-an-sdf-file-for-gazebo/
     text += '''      </link>
     '''
 
@@ -302,7 +324,8 @@ def create_joint(outfile, joint_name, parent, child, ox, oy, oz, roll, pitch, ya
     text = '''      <joint name="{}" type="{}">
         <parent>{}</parent>
         <child>{}</child>
-        <pose relative_to='{}'>{} {} {} {} {} {}</pose>
+        <!--<pose relative_to='{}'>[] [] [] [] [] []</pose>-->
+        <pose>{} {} {} {} {} {}</pose>
 
 
       
@@ -329,8 +352,9 @@ def create_joint(outfile, joint_name, parent, child, ox, oy, oz, roll, pitch, ya
 
  
 def run():
-  mesh_type = 'OBJ' #OBJ or STL
-  output_location = '/home/sunset/sunset_ws/src/kora/src/kora_desc'
+  visual_mesh_type = 'OBJ' #OBJ or STL
+  collision_mesh_type = 'STL'
+  desc_path = '/home/sunset/sunset_ws/src/kora/src/kora_desc'
   robot_name = 'kora'
   v = 1.75 #joint angular velocity
   effort = 3.92 #joint effort
@@ -373,12 +397,12 @@ def run():
  
   }
   #Define link names (and link stl colors)
-  if mesh_type == 'STL':                                                         
+  if visual_mesh_type == 'STL':                                                         
     links = {'torso_lower':'Black',
             'torso_mid':'Black',
             'torso_upper':'Black'
             }
-  elif mesh_type == 'OBJ':
+  elif visual_mesh_type == 'OBJ':
   #{link_name:[color, origin x, origin y, origin z, roll, pitch, yaw]}
     #'neck':['None', 0, 0, .10357, 0, 0, 0],
     #        'neck_connection':['None', 0, 0, 0, 0, 0, 0],
@@ -441,7 +465,7 @@ def run():
   #TODO: Add plugins
   
   # Add data from joints into links. For link meshes with origin different from joint origin, this data may need to be edited afterward.
-  for joint in joints:
+  for joint in joints: 
     links[joints[joint][2]]['ox'] = joints[joint][3]
     links[joints[joint][2]]['oy'] = joints[joint][4]
     links[joints[joint][2]]['oz'] = joints[joint][5]
@@ -459,20 +483,22 @@ def run():
      print(link)
      print(links[link])
 
-  
-  with open('{}/kora.sdf'.format(output_location), 'w') as outfile:
+
+  inertia_scale = 100
+  collision_scale = .001
+  with open('{}/kora.sdf'.format(desc_path), 'w') as outfile:
     create_header(outfile, robot_name, 'kora_world') #Assumes fixed joint between robot & world
     outfile.write('\n\n')
     for link in links:
-        create_link(outfile, link, links[link])
+        create_link(outfile, link, links[link], desc_path, inertia_scale=inertia_scale, collision_scale=collision_scale, collision_mesh_type=collision_mesh_type)
         outfile.write('\n')
     outfile.write('\n')
     for joint in joints:    
-        create_joint(outfile, *joints[joint]) # unpack value
+        create_joint(outfile, *joints[joint]) # unpack joint
         outfile.write('\n')
     outfile.write('\n</model>\n</world>\n</sdf>')
   
 
-  #os.system('ros2 run xacro xacro {}/kora.urdf.xacro > {}/kora.urdf'.format(output_location, output_location)) #generate urdf from xacro
+  #os.system('ros2 run xacro xacro {}/kora.urdf.xacro > {}/kora.urdf'.format(desc_path, desc_path)) #generate urdf from xacro
 
 run()

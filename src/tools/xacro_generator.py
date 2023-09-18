@@ -11,11 +11,14 @@ This software is licensed under the MIT License.
 #This ROS2 executable defines joints, links, properties, etc for a ROS2 robot and outputs both a xacro & urdf
 
 import os
+import pandas as pd
+import ast
+
 
 def create_header(outfile, robot_name, properties, world_name, robot_base_name): 
     text = '''<?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="{}">
-<!-- Built using Xacro Generator: https://github.com/Bentell-Robotics/kora_tools.git -->'''.format(robot_name)
+<!-- Built using Xacro Generator: https://github.com/Miimiikiu/kora_tools.git -->'''.format(robot_name)
 
     for prop in properties:
         text += '''\n<xacro:property name="{}" value="{}"/>'''.format(prop, properties[prop])
@@ -31,14 +34,23 @@ def create_header(outfile, robot_name, properties, world_name, robot_base_name):
     outfile.write(text)
     return(text)
 
-def create_link(outfile, link_name, color, ox, oy, oz, roll, pitch, yaw):
+def create_link(outfile, link_name, color, ox, oy, oz, roll, pitch, yaw, desc_path):
+    
+    df = pd.read_csv(desc_path + '/geometry/geometry.csv', sep=';') # get data for robot inertia values
+    inertials_string = df.loc[df['Mesh Name'] == '{}.obj'.format(link_name), 'Inertia Tensor'].values[0]
+    inertials = ast.literal_eval(inertials_string)
+    mass_string = df.loc[df['Mesh Name'] == '{}.obj'.format(link_name), 'Mass'].values[0]
+    mass = float(mass_string)
+    inertia_scale = 100
+    collision_scale = .01
+    visual_scale = 1
     text = '''<link name="{}">
       <visual>
         <origin xyz="{} {} {}" rpy="{} {} {}"/>
         <geometry>
-          <mesh filename="{}" scale="1 1 1"/>
+          <mesh filename="{}" scale="{} {} {}"/>
         </geometry>
-    '''.format(link_name, ox, oy, oz, roll, pitch, yaw, '${' + link_name + '_mesh' + '}')
+    '''.format(link_name, ox, oy, oz, roll, pitch, yaw, '${' + link_name + '_visual_mesh' + '}', visual_scale, visual_scale, visual_scale)
 
     if color != 'None':
       text += '''
@@ -50,13 +62,22 @@ def create_link(outfile, link_name, color, ox, oy, oz, roll, pitch, yaw):
       <collision>
         <origin xyz="{} {} {}" rpy="{} {} {}"/>
         <geometry>
-          <mesh filename="{}" scale="1 1 1"/>
+          <mesh filename="{}" scale="{} {} {}"/>
         </geometry>
       </collision>
 
+
+'''.format(ox, oy, oz, roll, pitch, yaw, '${' + link_name + '_collision_mesh' + '}', collision_scale, collision_scale, collision_scale)
+    
+    text += '''
+      <inertial>
+        <origin xyz="{} {} {}" rpy="{} {} {}"/>
+        <mass value="{}" />
+        <inertia ixx="{}" ixy="{}" ixz="{}" iyy="{}" iyz="{}" izz="{}" />
+      </inertial>
       <gazebo reference="{}">
       </gazebo>
-</link>'''.format(ox, oy, oz, roll, pitch, yaw, '${' + link_name + '_mesh' + '}', link_name)
+</link>'''.format(ox, oy, oz, roll, pitch, yaw, mass, inertials[0][0]*inertia_scale, inertials[0][1]*inertia_scale, inertials[0][2]*inertia_scale, inertials[1][1]*inertia_scale, inertials[1][2]*inertia_scale, inertials[2][2]*inertia_scale, link_name)
     
     outfile.write(text)
     return(text)
@@ -77,7 +98,7 @@ def create_joint(outfile, joint_name, parent, child, ox, oy, oz, roll, pitch, ya
  
 def run():
   mesh_type = 'OBJ' #OBJ or STL
-  output_location = '/home/sunset/sunset_ws/src/kora/src/kora_desc'
+  desc_path = '/home/sunset/sunset_ws/src/kora/src/kora_desc'
   robot_name = 'kora'
   v = 1.75 #joint angular velocity
   effort = 3.92 #joint effort
@@ -172,13 +193,15 @@ def run():
   #define STL colors and mesh locations, and any additional required properties
   properties = {'Black':'0.0 0.0 0.0 1.0'}
   for link in links:
-     properties[link + '_mesh'] = 'file://{}/{}/{}.{}'.format(output_location, mesh_type, link, mesh_type.lower())
+     properties[link + '_visual_mesh'] = 'file://{}/visuals/{}/{}.{}'.format(desc_path, mesh_type.upper(), link, mesh_type.lower())
+     properties[link + '_collision_mesh'] = 'file://{}/collisions/{}/{}_collision.{}'.format(desc_path, mesh_type.upper(), link, mesh_type.lower())
   
-  with open('{}/kora.urdf.xacro'.format(output_location), 'w') as outfile:
+  
+  with open('{}/kora.urdf.xacro'.format(desc_path), 'w') as outfile:
     header_text = create_header(outfile, robot_name, properties, 'world', 'torso_lower') #Assumes fixed joint between robot & world
     outfile.write('\n\n')
     for link in links:
-        link_text = create_link(outfile, link, *links[link])
+        link_text = create_link(outfile, link, *links[link], desc_path)
         outfile.write('\n')
     outfile.write('\n')
     for joint in joints:    
@@ -187,6 +210,6 @@ def run():
     outfile.write('\n</robot>')
 
 
-  os.system('ros2 run xacro xacro {}/kora.urdf.xacro > {}/kora.urdf'.format(output_location, output_location)) #generate urdf from xacro
+  os.system('ros2 run xacro xacro {}/kora.urdf.xacro > {}/kora.urdf'.format(desc_path, desc_path)) #generate urdf from xacro
 
 run()
