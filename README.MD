@@ -40,7 +40,7 @@ Script to use PyMeshLab to scan through mesh files and put the data into a csv.
 
 ### Linux Usage
 
-You're probably going to want to scan through the mesh files in your visuals folder, so edit the path appropriately. 
+You're probably going to want to scan through the mesh files in your visuals folder, so edit the path appropriately. Additionally, you'll need to make a `geometry` folder in your robot's description folder.
 
 You of course can't get the mass from MeshLab so this value is defaulted to 1 so that it's at least usable for testing purposes, so you'll have to replace these manually for your robot. 
 
