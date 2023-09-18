@@ -5,7 +5,7 @@ This software is licensed under the MIT License.
 
 """
 
-# pymeshlab cannot be used with Anaconda. You may want to install run this file directly from your system without using ROS2.
+# pymeshlab cannot be used with Anaconda. You may want to run this file directly from your system without using ROS2.
 
 import pymeshlab
 import os
