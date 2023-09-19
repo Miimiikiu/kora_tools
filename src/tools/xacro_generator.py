@@ -109,7 +109,7 @@ def run():
           'neck_connection_joint':['neck_connection_joint', 'torso_upper', 'neck_connection', 0, 0, .22609, 0, 0, 0, 1, 0, 0, 0, .22, 'fixed', effort, v],
           'neck_x':['neck_x', 'torso_upper', 'neck', 0, 0, .14829, 0, 0, 0, 1, 0, 0, 0, .22, 'revolute', effort, v],
           'neck_z':['neck_z', 'neck', 'head', 0, 0, .12975, 0, 0, 0, 1, 0, 0, 0, .22, 'revolute', effort, v],
-          'realsense_joint':['realsense_joint', 'head', 'realsense', 0, -.2, .2, 0, 0, 0, 1, 0, 0, 0, .22, 'fixed', effort, v],
+          'realsense_joint':['realsense_joint', 'head', 'realsense', 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, .22, 'fixed', effort, v], #-.2y, .2z
 
           'shoulder_roll_dexter':['shoulder_roll_dexter', 'torso_upper', 'shoulder_bracket_dexter', -.10976, 0, .14829, 0, .165143, 0, 1, 0, 0, 0, .22, 'revolute', effort, v],
           'shoulder_roll_sinister':['shoulder_roll_sinister', 'torso_upper', 'shoulder_bracket_sinister', .10976, 0, .14829, 0, -.165143, 0, 1, 0, 0, 0, .22, 'revolute', effort, v],

@@ -28,8 +28,8 @@ def create_header(outfile, robot_name, world_name):
     #for prop in properties:
     #    text += '''\n<xacro:property name="{}" value="{}"/>'''.format(prop, properties[prop])
     text += '''\n\n
-  <world name="{}">
-    <physics name="1ms" type="ignored">
+  <!--<world name="{}">
+    <physics name="1ms" type="ignored">-->
         <!--<ode>
             <solver>
                 <type>"quick"</type>
@@ -38,7 +38,7 @@ def create_header(outfile, robot_name, world_name):
                 <use_dynamic_moi_rescaling>false</use_dynamic_moi_rescaling>
             </solver>
         </ode>-->
-        <max_step_size>0.001</max_step_size>
+        <!--<max_step_size>0.001</max_step_size>
         <real_time_factor>100.0</real_time_factor>
     </physics>
 
@@ -55,22 +55,22 @@ def create_header(outfile, robot_name, world_name):
     <plugin
         filename="ignition-gazebo-scene-broadcaster-system"
         name="ignition::gazebo::systems::SceneBroadcaster">
-    </plugin>
+    </plugin>-->
 '''.format(world_name)
     if allow_sensing == True:
         text += '''
-    <plugin
+    <!--<plugin
       filename="libignition-gazebo-sensors-system.so"
-      name="ignition::gazebo::systems::Sensors">
+      name="ignition::gazebo::systems::Sensors">-->
       <!-- ogre2 not working with just the MESA_GL_VERSION_OVERRIDE=3.3 trick -->
-      <render_engine>ogre</render_engine>
-    </plugin>
+      <!--<render_engine>ogre</render_engine>
+    </plugin>-->
     '''
     text += '''
 
 
 
-    <light type="directional" name="sun">
+    <!--<light type="directional" name="sun">
         <cast_shadows>true</cast_shadows>
         <pose>0 0 10 0 0 0</pose>
         <diffuse>0.8 0.8 0.8 1</diffuse>
@@ -119,42 +119,11 @@ def create_header(outfile, robot_name, world_name):
             </material>
             </visual>
         </link>
-    </model>
-    <!--
-    <include>
-      <static>true</static>
-      <name>Electrical Box1</name>
-      <pose>0 1.5 2 0 0 0</pose>
-      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Electrical Box</uri>
-    </include>
-
-    <include>
-      <static>true</static>
-      <name>Electrical Box2</name>
-      <pose>0 -1 1 0 0 0</pose>
-      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Electrical Box</uri>
-    </include>
-
-    <include>
-      <static>true</static>
-      <name>Electrical Box3</name>
-      <pose>2 1.5 2 0 0 0</pose>
-      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Electrical Box</uri>
-    </include>
-
-    <include>
-      <static>true</static>
-      <name>Electrical Box4</name>
-      <pose>-2 1.5 2 0 0 0</pose>
-      <uri>https://fuel.gazebosim.org/1.0/openrobotics/models/Electrical Box</uri>
-    </include>-->
+    </model>-->
 
     <model name="{}" canonical_link='torso_lower'>
       <static>true</static>
       <plugin filename="libignition-gazebo-joint-state-publisher-system.so" name="ignition::gazebo::systems::JointStatePublisher"/>
-
-      
-      <pose relative_to='world'>0 0 1 0 0 0</pose> 
 
 
     '''.format(robot_name)
@@ -170,6 +139,7 @@ def create_link(outfile, link_name, link_data, desc_path, inertia_scale=1, visua
     text = '''      <link name="{}">
         <pose relative_to='{}'>{} {} {} {} {} {}</pose>
         <!--<pose>[] [] [] [] [] []</pose>-->
+        <self_collide>false</self_collide>
         <visual name='visual_{}'>
           <geometry>
             <mesh>
@@ -216,25 +186,19 @@ def create_link(outfile, link_name, link_data, desc_path, inertia_scale=1, visua
     if link_data['sensor'] != {} and allow_sensing == True: #https://github.com/ros-simulation/gazebo_ros_pkgs/wiki/ROS-2-Migration:-Camera#gazebo_ros_depth_camera
       text += '''<!-- {} -->
       
-              <sensor type="camera" name="camera_sensor_color">
+        <sensor type="camera" name="camera_sensor_color">
+          <pose relative_to='realsense'>0.0 0.0 0.0 0.0 0.0 4.7124</pose>
+          
           
 
           <!-- Set always_on only sensor, not on plugin -->
           <always_on>0</always_on>
 
           <!-- Set update_rate only sensor, not on plugin -->
-          <update_rate>1</update_rate>
+          <update_rate>5</update_rate>
 
           <camera name="camera_color">
-            
-            <distortion>
-              <k1>0.1</k1>
-              <k2>0.2</k2>
-              <k3>0.3</k3>
-              <p1>0.4</p1>
-              <p2>0.5</p2>
-              <center>0.5 0.5</center>
-            </distortion>
+
           </camera>
 
           <!-- Use camera, not camera_triggered -->
@@ -273,14 +237,14 @@ def create_link(outfile, link_name, link_data, desc_path, inertia_scale=1, visua
 
           <camera name="depth_camera">
             
-            <distortion>
+            <!--<distortion>
               <k1>0.1</k1>
               <k2>0.2</k2>
               <k3>0.3</k3>
               <p1>0.4</p1>
               <p2>0.5</p2>
               <center>0.5 0.5</center>
-            </distortion>
+            </distortion>-->
           </camera>
 
           <plugin name="plugin_name_depth" filename="libgazebo_ros_camera.so">
@@ -365,7 +329,7 @@ def run():
           'neck_connection_joint':['neck_connection_joint', 'torso_upper', 'neck_connection', 0, 0, .22609, 0, 0, 0, 1, 0, 0, 0, .22, 'fixed', effort, v],
           'neck_x':['neck_x', 'torso_upper', 'neck', 0, 0, .14829, 0, 0, 0, 1, 0, 0, 0, .22, 'revolute', effort, v],
           'neck_z':['neck_z', 'neck', 'head', 0, 0, .12975, 0, 0, 0, 0, 0, 1, 0, .22, 'revolute', effort, v],
-          'realsense_joint':['realsense_joint', 'head', 'realsense', 0, -.2, .2, 0, 0, 0, 1, 0, 0, 0, .22, 'fixed', effort, v],
+          'realsense_joint':['realsense_joint', 'head', 'realsense', 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, .22, 'fixed', effort, v], #-.2y, .2z
 
           'shoulder_roll_dexter':['shoulder_roll_dexter', 'torso_upper', 'shoulder_bracket_dexter', -.10976, 0, .14829, 0, .165143, 0, 1, 0, 0, 0, .22, 'revolute', effort, v],
           'shoulder_roll_sinister':['shoulder_roll_sinister', 'torso_upper', 'shoulder_bracket_sinister', .10976, 0, .14829, 0, -.165143, 0, 1, 0, 0, 0, .22, 'revolute', effort, v],
@@ -496,7 +460,7 @@ def run():
     for joint in joints:    
         create_joint(outfile, *joints[joint]) # unpack joint
         outfile.write('\n')
-    outfile.write('\n</model>\n</world>\n</sdf>')
+    outfile.write('\n</model>\n</sdf>')
   
 
   #os.system('ros2 run xacro xacro {}/kora.urdf.xacro > {}/kora.urdf'.format(desc_path, desc_path)) #generate urdf from xacro
